@@ -38,7 +38,7 @@ Ghost Fabric solves this through ruthless miniaturization using Rust and framewo
 - Sensor I/O drivers
 - The decision/routing agent
 
-Because the binary is microscopic relative to available L3 cache (modern CPUs carry 16–64MB), the CPU loads the execution environment directly into cache, bypassing RAM fetch latency. The result: millisecond cold-boots and deterministic execution with zero heap allocation in the hot path.
+Because the binary is microscopic relative to available L3 cache (modern CPUs carry 16–64MB), the binary's working set fits entirely in L3 cache, keeping hot execution paths off the memory bus. The result: millisecond cold-boots and deterministic execution with minimal allocation and a deterministic memory footprint.
 
 No interpreter. No garbage collector. No dynamic linking. No package manager on the node. One file. One process. One owner.
 
