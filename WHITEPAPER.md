@@ -10,7 +10,7 @@
 
 The prevailing architecture of modern Artificial Intelligence is fundamentally broken for physical, distributed systems. The industry has standardized on cloud-tethered, bloated Python environments to execute inference. This introduces catastrophic latency and critical supply chain vulnerabilities.
 
-Ghost Fabric is a necessary architectural correction. Operating on the 915MHz (ISM/LoRa) radio band, Ghost Fabric is a decentralized cognitive overlay network. It abandons Python wrappers entirely, instead utilizing hyper-specific AI models trained on curated directed content, compiled into statically linked, 19MB Rust binaries. The result is instant cold-boots, deterministic memory footprints, and true edge sovereignty.
+Ghost Fabric is a necessary architectural correction. Operating on the 915MHz (ISM/LoRa) radio band, Ghost Fabric is a decentralized cognitive overlay network. It abandons Python wrappers entirely, instead using hyper-specific AI models trained on curated directed content, compiled into statically linked, 19MB Rust binaries. The result is instant cold-boots, deterministic memory footprints, and true edge sovereignty.
 
 ## 1. The Physics of the 915MHz Bottleneck
 
