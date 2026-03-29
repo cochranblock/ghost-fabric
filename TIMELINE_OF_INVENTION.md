@@ -18,6 +18,54 @@
 **AI Role:** AI drafted whitepaper sections and added technical specifics (LoRa throughput, L3 cache sizing, dependency counts). Human directed the thesis, validated all claims against hardware specs, and corrected cache-resident execution claims for accuracy.
 **Proof:** [WHITEPAPER.md](WHITEPAPER.md)
 
+### 2026-03-26 — License + Proof of Artifacts + Timeline
+
+**What:** Added Unlicense, created PROOF_OF_ARTIFACTS.md and TIMELINE_OF_INVENTION.md.
+**Commit:** `6c6bd47`, `bc93ff6`
+
+### 2026-03-27 — QA Round 1: Doc Fix + Cargo.lock
+
+**What:** P12 slop eradication ("utilizing" → "using" in whitepaper). Added README with cochranblock.org backlink. Committed Cargo.lock for binary crate reproducibility.
+**Commit:** `940b69b`, `26dd389`, `5dd39b7`
+**QA Result:** PASS — `cargo build --release` zero errors, `cargo clippy --release -- -D warnings` clean, zero warnings.
+
+### 2026-03-27 — P13 Tokenization + Binary Size Optimization
+
+**What:** Applied Kova P13 compression mapping. Created `docs/compression_map.md`. Renamed entry point to `f0`. Added release profile: `opt-level='z'`, LTO, single codegen unit, `panic='abort'`, strip. Binary: 285,936 bytes (279KB) pre-deps.
+**Commit:** `ce0a27c`
+**QA Result (Round 2):** PASS — `cargo clean && cargo build --release` zero errors, clippy clean, `cargo test` passes (0 tests).
+
+### 2026-03-29 — User Story Analysis + Top 3 Fixes
+
+**What:** Full end-to-end user story walkthrough. Brutal honest assessment: score 2/10. Implemented top 3 fixes:
+1. CLI with clap: `init`, `start`, `status` subcommands, `--help`, `--version`
+2. Node identity: generates `gf-{hex}` ID, persists config to `~/.config/ghost-fabric/node.json`
+3. Module scaffold: `radio.rs`, `mesh.rs`, `inference.rs`, `sensor.rs`, `config.rs`
+
+Updated P13 compression map: f0-f9, T0, s0-s3, c0-c2.
+**Commit:** `0623d4d`
+**Binary size:** 469,792 bytes (459KB) with 5 deps (clap, dirs, rand, serde, serde_json).
+**Proof:** [USER_STORY_ANALYSIS.md](USER_STORY_ANALYSIS.md)
+
+### 2026-03-29 — Federal Compliance Govdocs
+
+**What:** Created 11 federal compliance documents in `govdocs/`:
+- SBOM.md — Software Bill of Materials (EO 14028)
+- SSDF.md — NIST SP 800-218 compliance mapping
+- SUPPLY_CHAIN.md — dependency provenance and build reproducibility
+- SECURITY.md — security posture, attack surface analysis
+- ACCESSIBILITY.md — Section 508 / CLI accessibility
+- PRIVACY.md — privacy impact assessment (no PII collected)
+- FIPS.md — FIPS 140-2/3 status and path to compliance
+- FedRAMP_NOTES.md — deployment model (on-prem, not cloud)
+- CMMC.md — CMMC Level 1-2 practice mapping
+- ITAR_EAR.md — export control classification (EAR99)
+- FEDERAL_USE_CASES.md — agency-specific use cases (DoD, DHS, USDA, DOE, NASA, GSA, VA)
+
+Updated README with quick start and govdocs reference.
+**Commit:** `f9f5342`
+**AI Role:** AI drafted all govdocs from source code inspection. Human directed which frameworks to address and validated federal program references.
+
 ---
 
 *Part of the [CochranBlock](https://cochranblock.org) zero-cloud architecture. All source under the Unlicense.*
