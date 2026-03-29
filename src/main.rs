@@ -1,10 +1,5 @@
-mod config;
-mod inference;
-mod mesh;
-mod radio;
-mod sensor;
-
 use clap::{Parser, Subcommand};
+use ghost_fabric_core::{config, radio, mesh, inference, sensor};
 
 /// Ghost Fabric — sovereign edge intelligence over sub-GHz cognitive mesh
 #[derive(Parser)]
@@ -52,7 +47,6 @@ fn f1() {
     println!("Starting node: {}", cfg.node_id);
     println!("Radio: {} MHz, SF{}", cfg.frequency_mhz, cfg.spreading_factor);
 
-    // Module status
     println!("\nSubsystems:");
     println!("  radio:     {}", radio::f5());
     println!("  mesh:      {}", mesh::f6());

@@ -1,7 +1,19 @@
+[workspace]
+members = [".", "android"]
+resolver = "3"
+
 [package]
 name = "ghost-fabric"
 version = "0.1.0"
 edition = "2024"
+
+[lib]
+name = "ghost_fabric_core"
+path = "src/lib.rs"
+
+[[bin]]
+name = "ghost-fabric"
+path = "src/main.rs"
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
