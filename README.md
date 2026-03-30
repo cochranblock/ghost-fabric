@@ -1,8 +1,8 @@
 # Ghost Fabric
 
-Sovereign edge intelligence over sub-GHz cognitive mesh networks. 19MB Rust binary + LoRa 915MHz. Distributed sensing, on-device AI inference, offline-first architecture for disconnected environments.
+Sovereign edge intelligence over sub-GHz cognitive mesh networks. Rust CLI + Android app for LoRa 915MHz mesh node management. Currently a scaffold with node identity, config, and subsystem status reporting. Inference, radio, and mesh networking are planned — not yet implemented.
 
-**Stack:** Rust, LoRa/915MHz, on-device ML, mesh networking
+**Stack:** Rust, clap CLI, egui (Android), serde/JSON config
 **License:** Unlicense
 
 ## Quick Start

@@ -10,6 +10,20 @@
 
 ```mermaid
 flowchart LR
+    CLI[CLI / Android] --> Config[Node Config]
+    Config --> Status[Status Report]
+    Status --> Radio[Radio ❌]
+    Status --> Mesh[Mesh ❌]
+    Status --> Inference[Inference ❌]
+    Status --> Sensor[Sensor ❌]
+```
+
+*❌ = stub — not yet implemented. See WHITEPAPER.md for target architecture.*
+
+### Target Architecture (not yet built)
+
+```mermaid
+flowchart LR
     Sensor[Sensor Data] --> Node[Ghost Fabric Node]
     Node --> Candle[Candle Inference]
     Candle --> Decision[Local Decision]
@@ -38,15 +52,16 @@ flowchart LR
 
 | Metric | Value |
 |--------|-------|
-| Rust LOC (src/) | 183 |
-| Source files | 6 (main.rs, config.rs, radio.rs, mesh.rs, inference.rs, sensor.rs) |
-| Public functions (P13 tokenized) | 10 (f0–f9) |
+| Rust LOC (src/) | 235 |
+| Source files | 7 (main.rs, lib.rs, config.rs, radio.rs, mesh.rs, inference.rs, sensor.rs) |
+| Public functions (P13 tokenized) | 12 (f0–f11) |
 | Types (P13 tokenized) | 1 (T0=NodeConfig) |
 | Fields (P13 tokenized) | 4 (s0–s3) |
 | CLI commands | 3 (init, start, status) |
 | Direct dependencies | 5 (clap, dirs, rand, serde, serde_json) |
 | Transitive dependencies | ~45 |
-| `unsafe` blocks | 0 |
+| `unsafe` blocks (core) | 0 |
+| `unsafe` blocks (android) | 1 (set_var for HOME path) |
 
 ## QA Results
 
@@ -84,7 +99,7 @@ flowchart LR
 
 | Category | Count | Range |
 |----------|-------|-------|
-| Functions | 10 | f0–f9 |
+| Functions | 12 | f0–f11 |
 | Types | 1 | T0 |
 | Fields | 4 | s0–s3 |
 | CLI commands | 3 | c0–c2 |

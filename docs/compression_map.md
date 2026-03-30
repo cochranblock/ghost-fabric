@@ -14,6 +14,9 @@
 | f7 | inference_status | src/inference.rs |
 | f8 | sensor_status | src/sensor.rs |
 | f9 | config_path | src/config.rs |
+| f10 | node_status_string | src/lib.rs |
+| f11 | init_and_report | src/lib.rs |
+| f12 | android_main | android/src/lib.rs |
 
 ## Types (t+num)
 

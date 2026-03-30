@@ -10,7 +10,7 @@
 
 The prevailing architecture of modern Artificial Intelligence is fundamentally broken for physical, distributed systems. The industry has standardized on cloud-tethered, bloated Python environments to execute inference. This introduces catastrophic latency and critical supply chain vulnerabilities.
 
-Ghost Fabric is a necessary architectural correction. Operating on the 915MHz (ISM/LoRa) radio band, Ghost Fabric is a decentralized cognitive overlay network. It abandons Python wrappers entirely, instead using hyper-specific AI models trained on curated directed content, compiled into statically linked, 19MB Rust binaries. The result is instant cold-boots, deterministic memory footprints, and true edge sovereignty.
+Ghost Fabric is a proposed architectural correction. Operating on the 915MHz (ISM/LoRa) radio band, Ghost Fabric will be a decentralized cognitive overlay network. The design abandons Python wrappers entirely, instead using hyper-specific AI models trained on curated directed content, compiled into statically linked Rust binaries targeting ~19MB. The design goal is instant cold-boots, deterministic memory footprints, and true edge sovereignty.
 
 ## 1. The Physics of the 915MHz Bottleneck
 
@@ -30,7 +30,7 @@ Python is the right tool for research. It is the wrong tool for deployment on ha
 
 ## 3. The 19MB Rust Architecture
 
-Ghost Fabric solves this through ruthless miniaturization using Rust and frameworks like Candle and Kalosm. Python is used strictly offline to plan architecture and curate training data. The production logic is compiled into a single 19MB statically linked binary containing:
+Ghost Fabric addresses this through ruthless miniaturization using Rust and frameworks like Candle and Kalosm. Python is used strictly offline to plan architecture and curate training data. The design targets a single ~19MB statically linked binary containing:
 
 - The inference engine (Candle)
 - Model weights (quantized, embedded)
@@ -38,13 +38,13 @@ Ghost Fabric solves this through ruthless miniaturization using Rust and framewo
 - Sensor I/O drivers
 - The decision/routing agent
 
-Because the binary is microscopic relative to available L3 cache (modern CPUs carry 16–64MB), the binary's working set fits entirely in L3 cache, keeping hot execution paths off the memory bus. The result: millisecond cold-boots and deterministic execution with minimal allocation and a deterministic memory footprint.
+At ~19MB the binary would be microscopic relative to available L3 cache (modern CPUs carry 16–64MB), so the working set could fit entirely in L3 cache, keeping hot execution paths off the memory bus. The target: millisecond cold-boots and deterministic execution with minimal allocation and a deterministic memory footprint.
 
 No interpreter. No garbage collector. No dynamic linking. No package manager on the node. One file. One process. One owner.
 
 ## 4. The Cognitive Overlay
 
-Because every node runs this intelligence engine, the network itself becomes cognitive. Nodes act as autonomous agents making routing and logic decisions entirely over the airwaves:
+When every node runs this intelligence engine, the network itself becomes cognitive. Nodes would act as autonomous agents making routing and logic decisions entirely over the airwaves:
 
 - **Sensor fusion**: Each node processes its own sensor data and transmits only decisions, not raw readings.
 - **Mesh routing**: Nodes dynamically select relay paths based on signal quality, battery state, and mission priority.
@@ -62,7 +62,7 @@ The network survives because each node is self-sufficient. There is no single po
 
 ## Conclusion
 
-Storage is cheap, but execution speed, bandwidth, and security are not. Ghost Fabric proves that by replacing bloated generalist models with AI-curated, hyper-specific logic compiled into bare-metal Rust, we can achieve true sovereign intelligence anywhere on earth.
+Storage is cheap, but execution speed, bandwidth, and security are not. Ghost Fabric proposes that by replacing bloated generalist models with AI-curated, hyper-specific logic compiled into bare-metal Rust, true sovereign intelligence becomes achievable anywhere on earth.
 
 The cloud is a crutch. The edge is the future. The mesh is the architecture.
 
