@@ -66,6 +66,30 @@ Updated README with quick start and govdocs reference.
 **Commit:** `f9f5342`
 **AI Role:** AI drafted all govdocs from source code inspection. Human directed which frameworks to address and validated federal program references.
 
+### 2026-03-29 — TOI + POA Update
+
+**What:** Updated TIMELINE_OF_INVENTION.md and PROOF_OF_ARTIFACTS.md with all session commits, QA results, binary sizes, P13 stats.
+**Commit:** `6bb7edc`
+
+### 2026-03-29 — Android AAB Build
+
+**What:** Restructured project into Cargo workspace: `ghost_fabric_core` library + CLI binary + Android `cdylib`. Built Android AAB using cargo-ndk (arm64-v8a) + Gradle `bundleRelease`. NativeActivity + egui app, auto-initializes node on first launch, displays node status with refresh button. Signed with upload keystore. Target API 35, min SDK 28.
+**Commit:** `be652be`
+**Binary size:** AAB 1,643,180 bytes (1.6MB), .so 3,062,432 bytes (3MB).
+**AI Role:** AI replicated pixel-forge's Android build pattern. Human directed the target and approved the approach.
+
+### 2026-03-30 — Truth Audit
+
+**What:** Adversarial fact-check of all project documentation. Found 13 discrepancies: present-tense claims for non-existent features (README, WHITEPAPER), stale metrics (POA), undisclosed unsafe block (SECURITY.md). Fixed all — changed whitepaper to design-intent language, updated all metrics, added current-state architecture diagram.
+**Commit:** `3aaf362`
+**AI Role:** AI performed adversarial audit, verified every claim against code and build output.
+
+### 2026-03-30 — Supply Chain Security Audit + Hot Reload + File Cleanup
+
+**What:** Federal-grade supply chain verification: `cargo audit` (0 CVEs), `cargo outdated` (all current), `cargo tree --duplicates` (0), deep code review of all 7 deps (unsafe counts, process spawning, network calls, env var reads). Added hot reload lifecycle module (f13-f16): PID lockfile, SIGTERM old instance, 5s grace period, SIGKILL fallback. File cleanup: .gitignore hardened. Written to govdocs/SUPPLY_CHAIN_AUDIT.md.
+**Commit:** `b4d35e6`
+**AI Role:** AI performed deep code review of dependency source code in `~/.cargo/registry/src/`. Human directed the audit scope.
+
 ---
 
 *Part of the [CochranBlock](https://cochranblock.org) zero-cloud architecture. All source under the Unlicense.*

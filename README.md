@@ -11,12 +11,27 @@ Sovereign edge intelligence over sub-GHz cognitive mesh networks. Rust CLI + And
 cargo build --release
 ghost-fabric init      # generate node identity
 ghost-fabric status    # show node config
-ghost-fabric start     # start mesh node
+ghost-fabric start     # start mesh node (PID lock + hot reload)
 ```
+
+## Platforms
+
+| Target | Artifact | Size |
+|--------|----------|------|
+| macOS/Linux CLI | `ghost-fabric` binary | 459 KB |
+| Android (arm64-v8a) | `app-release.aab` | 1.6 MB |
+
+## Features
+
+- **Node identity**: generates `gf-{hex}` node ID, persists JSON config
+- **CLI**: `init`, `start`, `status` subcommands with `--help`
+- **Hot reload**: PID lockfile + SIGTERM/SIGKILL lifecycle — deploy by running the new binary
+- **Android app**: NativeActivity + egui, auto-inits node on launch
+- **P13 tokenization**: compressed symbol names per Kova conventions
 
 ## Federal Compliance
 
-See [`govdocs/`](govdocs/) — SBOM, SSDF, FIPS, CMMC, FedRAMP, ITAR/EAR, supply chain integrity, security posture, privacy assessment, and federal use cases.
+See [`govdocs/`](govdocs/) — SBOM, SSDF, FIPS, CMMC, FedRAMP, ITAR/EAR, supply chain audit (deep code review), security posture, privacy assessment, and federal use cases.
 
 ---
 

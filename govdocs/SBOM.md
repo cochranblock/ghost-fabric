@@ -13,9 +13,10 @@
 | rand | 0.8.5 | MIT OR Apache-2.0 | Node ID generation |
 | serde | 1.0.228 | MIT OR Apache-2.0 | Config serialization |
 | serde_json | 1.0.149 | MIT OR Apache-2.0 | JSON config file format |
+| libc | 0.2.183 | MIT OR Apache-2.0 | Signal handling (SIGTERM/SIGKILL) for hot reload |
 
-**Direct dependencies: 5**
-**Total transitive dependencies: ~45**
+**Direct dependencies: 6**
+**Total transitive dependencies: ~49**
 
 ## Transitive Dependencies (depth 2)
 

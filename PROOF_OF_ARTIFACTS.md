@@ -37,7 +37,7 @@ flowchart LR
 
 | Metric | Value |
 |--------|-------|
-| Binary size (release, stripped) | 469,792 bytes (459KB) |
+| Binary size (release, stripped) | 470,080 bytes (459KB) |
 | Binary size (pre-deps scaffold) | 285,936 bytes (279KB) |
 | Target binary size (with weights) | 19MB (statically linked, embedded weights) |
 | Runtime | Bare metal Rust — no interpreter, no GC |
@@ -52,15 +52,15 @@ flowchart LR
 
 | Metric | Value |
 |--------|-------|
-| Rust LOC (src/) | 235 |
-| Source files | 7 (main.rs, lib.rs, config.rs, radio.rs, mesh.rs, inference.rs, sensor.rs) |
-| Public functions (P13 tokenized) | 12 (f0–f11) |
+| Rust LOC (src/) | 328 |
+| Source files | 8 (main.rs, lib.rs, config.rs, lifecycle.rs, radio.rs, mesh.rs, inference.rs, sensor.rs) |
+| Public functions (P13 tokenized) | 16 (f0–f16) |
 | Types (P13 tokenized) | 1 (T0=NodeConfig) |
 | Fields (P13 tokenized) | 4 (s0–s3) |
 | CLI commands | 3 (init, start, status) |
-| Direct dependencies | 5 (clap, dirs, rand, serde, serde_json) |
-| Transitive dependencies | ~45 |
-| `unsafe` blocks (core) | 0 |
+| Direct dependencies | 6 (clap, dirs, libc, rand, serde, serde_json) |
+| Transitive dependencies | ~49 |
+| `unsafe` blocks (core) | 4 (lifecycle.rs — libc::kill for SIGTERM/SIGKILL) |
 | `unsafe` blocks (android) | 1 (set_var for HOME path) |
 
 ## QA Results
@@ -99,7 +99,7 @@ flowchart LR
 
 | Category | Count | Range |
 |----------|-------|-------|
-| Functions | 12 | f0–f11 |
+| Functions | 16 | f0–f16 |
 | Types | 1 | T0 |
 | Fields | 4 | s0–s3 |
 | CLI commands | 3 | c0–c2 |
