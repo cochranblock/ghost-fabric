@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use ghost_fabric_core::{config, radio, mesh, inference, sensor};
+use ghost_fabric_core::{config, lifecycle, radio, mesh, inference, sensor};
 
 /// Ghost Fabric — sovereign edge intelligence over sub-GHz cognitive mesh
 #[derive(Parser)]
@@ -34,7 +34,7 @@ fn f0() {
     }
 }
 
-/// f1=start — start the mesh node
+/// f1=start — start the mesh node with hot reload lifecycle
 fn f1() {
     let cfg = config::f4();
     let cfg = match cfg {
@@ -44,6 +44,11 @@ fn f1() {
             std::process::exit(1);
         }
     };
+
+    // Hot reload: acquire PID lock, SIGTERM old instance
+    lifecycle::f14();
+    println!("PID {} acquired lock at {}", std::process::id(), lifecycle::f13().display());
+
     println!("Starting node: {}", cfg.node_id);
     println!("Radio: {} MHz, SF{}", cfg.frequency_mhz, cfg.spreading_factor);
 
@@ -53,6 +58,9 @@ fn f1() {
     println!("  inference: {}", inference::f7());
     println!("  sensor:    {}", sensor::f8());
     println!("\nNode ready. Waiting for implementation.");
+
+    // Clean up PID on exit
+    lifecycle::f16();
 }
 
 /// f2=status — display node identity and config

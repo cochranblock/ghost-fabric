@@ -17,6 +17,10 @@
 | f10 | node_status_string | src/lib.rs |
 | f11 | init_and_report | src/lib.rs |
 | f12 | android_main | android/src/lib.rs |
+| f13 | pid_path | src/lifecycle.rs |
+| f14 | acquire (PID lock + SIGTERM old) | src/lifecycle.rs |
+| f15 | signal_old (SIGTERM/SIGKILL) | src/lifecycle.rs |
+| f16 | release (remove PID lockfile) | src/lifecycle.rs |
 
 ## Types (t+num)
 
