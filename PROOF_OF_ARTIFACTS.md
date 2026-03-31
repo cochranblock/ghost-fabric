@@ -47,6 +47,8 @@ flowchart LR
 | RAM target | 8–32MB |
 | Python dependencies | Zero in production |
 | Cloud dependencies | Zero |
+| Android AAB (arm64-v8a) | 1,643,180 bytes (1.6MB) |
+| Android .so (arm64-v8a) | 3,062,432 bytes (3MB) |
 
 ## Codebase Stats
 
@@ -109,7 +111,7 @@ Compression map: [docs/compression_map.md](docs/compression_map.md)
 
 ## Federal Compliance
 
-11 documents in [`govdocs/`](govdocs/):
+12 documents in [`govdocs/`](govdocs/):
 
 | Document | Framework |
 |----------|-----------|
@@ -124,6 +126,7 @@ Compression map: [docs/compression_map.md](docs/compression_map.md)
 | CMMC.md | CMMC L1-L2 |
 | ITAR_EAR.md | Export control |
 | FEDERAL_USE_CASES.md | Agency use cases |
+| SUPPLY_CHAIN_AUDIT.md | Deep code review of all deps |
 
 ## How to Verify
 

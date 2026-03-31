@@ -90,6 +90,11 @@ Updated README with quick start and govdocs reference.
 **Commit:** `b4d35e6`
 **AI Role:** AI performed deep code review of dependency source code in `~/.cargo/registry/src/`. Human directed the audit scope.
 
+### 2026-03-30 — Polish Pass
+
+**What:** Synced all documentation with current state. README: added platforms table, features list. TOI: added 4 missing entries. POA: updated LOC (328), files (8), functions (16), deps (6), binary size (470,080). SBOM: added libc as direct dep.
+**Commit:** `04e115e`
+
 ---
 
 *Part of the [CochranBlock](https://cochranblock.org) zero-cloud architecture. All source under the Unlicense.*
