@@ -5,17 +5,18 @@
 *Prioritized work stack. Most important at top. Max 20 items.*
 *Self-reorganizes on review — stale items sink, urgent items rise.*
 
-*Last review: 2026-04-03*
+*Last review: 2026-04-03 (P23 Triple Lens)*
 
 ---
 
-1. [feature] Packet authentication — HMAC-SHA256 on mesh frames. Nodes reject unsigned packets. Needs `hmac` + `sha2` crates.
-2. [feature] Logging — structured logs to stderr. `--verbose` flag. Needed before real debugging.
-3. [feature] Config CLI — `ghost-fabric config set frequency 868` / `config get` / `config list`. Edit node.json without hand-editing.
+1. [security] Packet authentication — HMAC-SHA256 on every T12 frame. Shared key derived from configurable secret via HKDF. Nodes reject on MAC mismatch. Blocks src spoofing, peer table poisoning, and ping amplification. Add `hmac` + `sha2` + `hkdf` deps. Sign in f18, verify in f19.
+2. [security] Duplicate suppression + peer table cap — Seen-set of (src, seq) HashSet in T9 drops relayed duplicates, kills broadcast cascade. Cap PeerTable at 64 entries with LRU eviction on overflow, prevents OOM from flooded Sync frames. One PR: same attack surface.
+3. [test] Extract f22 to lib.rs + full handler tests — Move frame dispatch (Beacon/Ping/Pong/Data/Ack/Sync handlers, relay decision) from main.rs into a testable `pub fn f22(frame, my_id, peers, radio, seq)` in lib.rs. Add one test per T13 variant: peer added, pong sent, table merged, self-src dropped, TTL relay decremented. Currently zero coverage on the hottest path.
 4. [fix] Android app shows stubs — wire T9/T11 status into f10 so Android UI shows live peer count and model status instead of static strings.
-5. [feature] Duplicate frame suppression — track seen (src, seq) pairs, drop duplicates. Required for broadcast relay to work correctly.
-6. [test] Multi-node mesh test — spawn 4 ghost-fabric processes with UDS radio, verify peer discovery + route scoring + packet relay end-to-end.
-7. [research] Routing algorithm variants — use kova MoE to generate 3 competing mesh routing strategies. **Dep:** kova cluster tunnels.
+5. [feature] Logging — structured logs to stderr. `--verbose` flag. Needed before real debugging.
+6. [feature] Config CLI — `ghost-fabric config set frequency 868` / `config get` / `config list`. Edit node.json without hand-editing.
+7. [test] Multi-node mesh test — spawn 4 ghost-fabric processes with UDS radio, verify peer discovery + route scoring + packet relay end-to-end.
+8. [research] Routing algorithm variants — use kova MoE to generate 3 competing mesh routing strategies. **Dep:** kova cluster tunnels.
 9. [build] Cross-compile for ARM Linux — `aarch64-unknown-linux-gnu` target. Deploy to IRONHIVE nodes via kova C2. **Dep:** kova c2 sync.
 10. [build] Deploy to IRONHIVE — sync ghost-fabric to n0/n1/n2/n3, build on workers, run 4-node mesh over UDS. **Dep:** kova C2.
 11. [feature] Sensor trait impl — BME280 temperature/humidity/pressure over I2C. First real T4 driver. Needs `linux-embedded-hal` dep.
