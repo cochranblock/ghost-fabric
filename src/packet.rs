@@ -22,6 +22,8 @@ pub enum T13 {
     Ping,
     /// Peer discovery response
     Pong,
+    /// Neighbor table sync — share known peers on reconnection
+    Sync,
 }
 
 /// T14=Payload — typed payload content
@@ -41,6 +43,17 @@ pub enum T14 {
     Ping,
     /// Pong: battery %, peer count
     Pong { battery_pct: u8, peer_count: u8 },
+    /// Sync: compressed neighbor table entries
+    Sync { peers: Vec<T16> },
+}
+
+/// T16=SyncEntry — compressed peer info for state sync
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct T16 {
+    pub id: String,
+    pub rssi: i16,
+    pub battery: u8,
+    pub hops: u8,
 }
 
 /// T12=Frame — wire-format mesh packet
@@ -128,6 +141,18 @@ impl T12 {
             seq,
             ttl: 1,
             payload: T14::Ack { ack_seq },
+        }
+    }
+
+    /// f23=sync_frame — create a state sync frame with neighbor table
+    pub fn f23(src: &str, peers: Vec<T16>, seq: u16) -> Self {
+        Self {
+            src: src.to_string(),
+            dst: "*".to_string(),
+            kind: T13::Sync,
+            seq,
+            ttl: 2,
+            payload: T14::Sync { peers },
         }
     }
 
@@ -305,5 +330,43 @@ mod tests {
     #[test]
     fn decode_empty() {
         assert!(f19(&[]).is_err());
+    }
+
+    #[test]
+    fn sync_frame_round_trip() {
+        let entries = vec![
+            T16 { id: "gf-a".into(), rssi: -60, battery: 90, hops: 1 },
+            T16 { id: "gf-b".into(), rssi: -80, battery: 70, hops: 2 },
+        ];
+        let frame = T12::f23("gf-origin", entries, 5);
+        assert_eq!(frame.kind, T13::Sync);
+        assert!(frame.is_broadcast());
+        assert_eq!(frame.ttl, 2);
+        assert_eq!(frame.seq, 5);
+
+        let bytes = f18(&frame).unwrap();
+        assert!(bytes.len() < MAX_FRAME_BYTES);
+
+        let decoded = f19(&bytes).unwrap();
+        assert_eq!(decoded.src, "gf-origin");
+        if let T14::Sync { peers } = decoded.payload {
+            assert_eq!(peers.len(), 2);
+            assert_eq!(peers[0].id, "gf-a");
+            assert_eq!(peers[1].hops, 2);
+        } else {
+            panic!("wrong payload type");
+        }
+    }
+
+    #[test]
+    fn sync_frame_empty_peers() {
+        let frame = T12::f23("gf-origin", vec![], 0);
+        let bytes = f18(&frame).unwrap();
+        let decoded = f19(&bytes).unwrap();
+        if let T14::Sync { peers } = decoded.payload {
+            assert!(peers.is_empty());
+        } else {
+            panic!("wrong payload type");
+        }
     }
 }

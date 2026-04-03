@@ -116,6 +116,37 @@ impl T2 for T9 {
     }
 }
 
+impl T9 {
+    /// f24=export_sync — export peer table as sync entries for broadcast
+    pub fn f24(&self) -> Vec<crate::packet::T16> {
+        self.peers
+            .values()
+            .map(|p| crate::packet::T16 {
+                id: p.node_id.clone(),
+                rssi: p.rssi,
+                battery: p.battery_pct,
+                hops: p.hop_count,
+            })
+            .collect()
+    }
+
+    /// f25=import_sync — merge sync entries from a remote peer, incrementing hop count
+    pub fn f25(&mut self, entries: &[crate::packet::T16], _from_node: &str) -> usize {
+        let mut added = 0;
+        for entry in entries {
+            // Don't add ourselves or the sender (we already know them)
+            if self.peers.contains_key(&entry.id) {
+                continue;
+            }
+            let mut peer = T3::new(&entry.id, entry.rssi, entry.battery);
+            peer.hop_count = entry.hops.saturating_add(1);
+            self.peers.insert(entry.id.clone(), peer);
+            added += 1;
+        }
+        added
+    }
+}
+
 /// f6=mesh_status — report mesh subsystem state (legacy compat)
 pub fn f6() -> &'static str {
     "offline (no peers)"
@@ -227,5 +258,75 @@ mod tests {
     #[test]
     fn legacy_status() {
         assert_eq!(f6(), "offline (no peers)");
+    }
+
+    #[test]
+    fn export_sync_contains_all_peers() {
+        let mut table = T9::new();
+        table.add_peer(T3::new("gf-a", -60, 90));
+        table.add_peer(T3::new("gf-b", -80, 70));
+
+        let entries = table.f24();
+        assert_eq!(entries.len(), 2);
+        let ids: Vec<&str> = entries.iter().map(|e| e.id.as_str()).collect();
+        assert!(ids.contains(&"gf-a"));
+        assert!(ids.contains(&"gf-b"));
+    }
+
+    #[test]
+    fn export_sync_empty_table() {
+        let table = T9::new();
+        assert!(table.f24().is_empty());
+    }
+
+    #[test]
+    fn import_sync_adds_new_peers() {
+        let mut table = T9::new();
+        let entries = vec![
+            crate::packet::T16 { id: "gf-new1".into(), rssi: -70, battery: 80, hops: 1 },
+            crate::packet::T16 { id: "gf-new2".into(), rssi: -85, battery: 60, hops: 2 },
+        ];
+        let added = table.f25(&entries, "gf-sender");
+        assert_eq!(added, 2);
+        assert_eq!(table.peer_count(), 2);
+    }
+
+    #[test]
+    fn import_sync_increments_hops() {
+        let mut table = T9::new();
+        let entries = vec![
+            crate::packet::T16 { id: "gf-distant".into(), rssi: -90, battery: 50, hops: 2 },
+        ];
+        table.f25(&entries, "gf-relay");
+        let peer = table.get_peer("gf-distant").unwrap();
+        assert_eq!(peer.hop_count, 3); // 2 + 1
+    }
+
+    #[test]
+    fn import_sync_skips_known_peers() {
+        let mut table = T9::new();
+        table.add_peer(T3::new("gf-known", -60, 90));
+
+        let entries = vec![
+            crate::packet::T16 { id: "gf-known".into(), rssi: -70, battery: 80, hops: 1 },
+            crate::packet::T16 { id: "gf-new".into(), rssi: -75, battery: 70, hops: 1 },
+        ];
+        let added = table.f25(&entries, "gf-sender");
+        assert_eq!(added, 1); // only gf-new added
+        assert_eq!(table.peer_count(), 2);
+        // gf-known should not be overwritten
+        let peer = table.get_peer("gf-known").unwrap();
+        assert_eq!(peer.rssi, -60); // original value preserved
+    }
+
+    #[test]
+    fn import_sync_hop_overflow_saturates() {
+        let mut table = T9::new();
+        let entries = vec![
+            crate::packet::T16 { id: "gf-far".into(), rssi: -90, battery: 10, hops: 255 },
+        ];
+        table.f25(&entries, "gf-relay");
+        let peer = table.get_peer("gf-far").unwrap();
+        assert_eq!(peer.hop_count, 255); // saturating_add(1) on 255 stays 255
     }
 }

@@ -99,6 +99,16 @@ fn f1() {
             f22(&frame, &cfg.node_id, &mut peer_table, &mut mock_radio, &mut seq);
         }
 
+        // Every 30s: broadcast neighbor table sync when we have peers
+        if tick.is_multiple_of(30) && tick > 0 && peer_table.peer_count() > 0 {
+            let entries = peer_table.f24();
+            let sync = packet::T12::f23(&cfg.node_id, entries, seq);
+            if let Ok(bytes) = packet::f18(&sync) {
+                let _ = mock_radio.send(&bytes);
+                seq = seq.wrapping_add(1);
+            }
+        }
+
         // Every 60s: evict stale peers
         if tick.is_multiple_of(60) && tick > 0 {
             let evicted = peer_table.evict_stale(300);
@@ -209,6 +219,14 @@ fn f22(
         }
         packet::T13::Ack => {
             eprintln!("[ack] from {} for seq {:?}", frame.src, frame.payload);
+        }
+        packet::T13::Sync => {
+            if let packet::T14::Sync { peers: entries } = &frame.payload {
+                let added = peers.f25(entries, &frame.src);
+                if added > 0 {
+                    eprintln!("[mesh] sync from {}: {} new peer(s)", frame.src, added);
+                }
+            }
         }
     }
 

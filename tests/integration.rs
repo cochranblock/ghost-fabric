@@ -4,7 +4,7 @@
 
 use ghost_fabric_core::config;
 use ghost_fabric_core::mesh::{self, T2};
-use ghost_fabric_core::packet;
+use ghost_fabric_core::packet::{self, T16};
 use ghost_fabric_core::radio::{self, T1};
 use ghost_fabric_core::sensor::{self, T4};
 use ghost_fabric_core::inference::{self, T6};
@@ -185,6 +185,65 @@ fn ttl_relay_chain() {
     // Relay hop 3: TTL 1→0, should return false
     assert!(!frame.relay_hop());
     assert_eq!(frame.ttl, 0);
+}
+
+/// Sync propagation: node A knows peers, broadcasts sync, node B learns them.
+#[test]
+fn sync_state_propagation() {
+    // Node A has two known peers
+    let mut node_a = mesh::T9::new();
+    node_a.add_peer(mesh::T3::new("gf-x1", -55, 88));
+    node_a.add_peer(mesh::T3::new("gf-x2", -75, 65));
+
+    // A exports its peer table and creates a sync frame
+    let entries = node_a.f24();
+    assert_eq!(entries.len(), 2);
+
+    let sync_frame = packet::T12::f23("gf-node-a", entries, 1);
+    let bytes = packet::f18(&sync_frame).unwrap();
+    assert!(bytes.len() < packet::MAX_FRAME_BYTES);
+
+    // Frame transmitted over radio
+    let mut radio = radio::T8::new();
+    radio.init(915, 7, 125).unwrap();
+    radio.send(&bytes).unwrap();
+
+    // Node B receives it
+    let tx = radio.drain_tx();
+    let received = packet::f19(&tx[0]).unwrap();
+    assert_eq!(received.kind, packet::T13::Sync);
+
+    // Node B imports the peer table
+    let mut node_b = mesh::T9::new();
+    if let packet::T14::Sync { peers } = received.payload {
+        let added = node_b.f25(&peers, &received.src);
+        assert_eq!(added, 2);
+    } else {
+        panic!("expected Sync payload");
+    }
+
+    assert_eq!(node_b.peer_count(), 2);
+    // Hop count incremented for relayed peers
+    let x1 = node_b.get_peer("gf-x1").unwrap();
+    assert_eq!(x1.hop_count, 2); // 1 hop from node_a + 1
+
+    let x2 = node_b.get_peer("gf-x2").unwrap();
+    assert_eq!(x2.hop_count, 2);
+}
+
+/// Sync dedup: node B already knows gf-x1, only adds gf-x2.
+#[test]
+fn sync_dedup_existing_peers() {
+    let mut node_b = mesh::T9::new();
+    node_b.add_peer(mesh::T3::new("gf-x1", -60, 90));
+
+    let entries = vec![
+        T16 { id: "gf-x1".into(), rssi: -55, battery: 88, hops: 1 },
+        T16 { id: "gf-x2".into(), rssi: -75, battery: 65, hops: 1 },
+    ];
+    let added = node_b.f25(&entries, "gf-node-a");
+    assert_eq!(added, 1);
+    assert_eq!(node_b.peer_count(), 2);
 }
 
 /// Config validation rejects out-of-spec parameters.

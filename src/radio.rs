@@ -172,4 +172,139 @@ mod tests {
     fn legacy_status() {
         assert_eq!(f5(), "not connected (driver not implemented)");
     }
+
+    #[test]
+    fn init_sf_boundary_6() {
+        let mut r = T8::new();
+        r.init(915, 6, 125).unwrap();
+        assert_eq!(r.status(), "connected (mock)");
+    }
+
+    #[test]
+    fn init_sf_boundary_12() {
+        let mut r = T8::new();
+        r.init(915, 12, 125).unwrap();
+    }
+
+    #[test]
+    fn init_sf_zero() {
+        let mut r = T8::new();
+        assert!(r.init(915, 0, 125).is_err());
+    }
+
+    #[test]
+    fn send_exact_255_bytes() {
+        let mut r = T8::new();
+        r.init(915, 7, 125).unwrap();
+        let data = vec![0xABu8; 255];
+        r.send(&data).unwrap();
+        let sent = r.drain_tx();
+        assert_eq!(sent[0].len(), 255);
+    }
+
+    #[test]
+    fn send_empty() {
+        let mut r = T8::new();
+        r.init(915, 7, 125).unwrap();
+        r.send(&[]).unwrap();
+        let sent = r.drain_tx();
+        assert_eq!(sent[0].len(), 0);
+    }
+
+    #[test]
+    fn multiple_tx_accumulate() {
+        let mut r = T8::new();
+        r.init(915, 7, 125).unwrap();
+        r.send(b"one").unwrap();
+        r.send(b"two").unwrap();
+        r.send(b"three").unwrap();
+        let sent = r.drain_tx();
+        assert_eq!(sent.len(), 3);
+        assert_eq!(sent[0], b"one");
+        assert_eq!(sent[1], b"two");
+        assert_eq!(sent[2], b"three");
+    }
+
+    #[test]
+    fn drain_tx_clears_buffer() {
+        let mut r = T8::new();
+        r.init(915, 7, 125).unwrap();
+        r.send(b"data").unwrap();
+        let first = r.drain_tx();
+        assert_eq!(first.len(), 1);
+        let second = r.drain_tx();
+        assert!(second.is_empty());
+    }
+
+    #[test]
+    fn recv_drains_in_order() {
+        let mut r = T8::new();
+        r.init(915, 7, 125).unwrap();
+        r.inject_rx(b"first".to_vec(), -80);
+        r.inject_rx(b"second".to_vec(), -90);
+        r.inject_rx(b"third".to_vec(), -70);
+
+        assert_eq!(r.recv(0).unwrap(), Some(b"first".to_vec()));
+        assert_eq!(r.recv(0).unwrap(), Some(b"second".to_vec()));
+        assert_eq!(r.recv(0).unwrap(), Some(b"third".to_vec()));
+        assert_eq!(r.recv(0).unwrap(), None);
+    }
+
+    #[test]
+    fn rssi_none_before_inject() {
+        let r = T8::new();
+        assert_eq!(r.last_rssi(), None);
+    }
+
+    #[test]
+    fn rssi_updates_on_inject() {
+        let mut r = T8::new();
+        r.inject_rx(b"a".to_vec(), -50);
+        assert_eq!(r.last_rssi(), Some(-50));
+        r.inject_rx(b"b".to_vec(), -99);
+        assert_eq!(r.last_rssi(), Some(-99));
+    }
+
+    #[test]
+    fn recv_before_init_error() {
+        let mut r = T8::new();
+        assert!(r.recv(100).is_err());
+    }
+
+    #[test]
+    fn send_after_recv() {
+        let mut r = T8::new();
+        r.init(915, 7, 125).unwrap();
+        r.inject_rx(b"in".to_vec(), -70);
+        r.recv(0).unwrap();
+        r.send(b"out").unwrap();
+        assert_eq!(r.drain_tx().len(), 1);
+    }
+
+    #[test]
+    fn default_impl() {
+        let r = T8::default();
+        assert_eq!(r.status(), "not initialized");
+        assert_eq!(r.last_rssi(), None);
+    }
+
+    #[test]
+    fn init_stores_params() {
+        let mut r = T8::new();
+        r.init(868, 10, 250).unwrap();
+        assert!(r.initialized);
+        assert_eq!(r.freq_mhz, 868);
+        assert_eq!(r.sf, 10);
+        assert_eq!(r.bw_khz, 250);
+    }
+
+    #[test]
+    fn packet_size_error_message() {
+        let mut r = T8::new();
+        r.init(915, 7, 125).unwrap();
+        let big = vec![0u8; 300];
+        let err = r.send(&big).unwrap_err();
+        assert!(err.contains("300"), "error should contain actual size");
+        assert!(err.contains("255"), "error should contain max size");
+    }
 }
