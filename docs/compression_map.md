@@ -24,6 +24,10 @@
 | f15 | signal_old (SIGTERM/SIGKILL) | src/lifecycle.rs |
 | f16 | release (remove PID lockfile) | src/lifecycle.rs |
 | f17 | validate (check config LoRa spec) | src/config.rs |
+| f18 | encode (frame to CBOR bytes) | src/packet.rs |
+| f19 | decode (CBOR bytes to frame) | src/packet.rs |
+| f20 | beacon (create beacon frame) | src/packet.rs |
+| f21 | data_frame (create data frame) | src/packet.rs |
 
 ## Types (t+num)
 
@@ -41,6 +45,9 @@
 | T9 | PeerTable | src/mesh.rs |
 | T10 | MockSensor | src/sensor.rs |
 | T11 | MockEngine | src/inference.rs |
+| T12 | Frame (wire format) | src/packet.rs |
+| T13 | FrameKind (packet type tag) | src/packet.rs |
+| T14 | Payload (typed variants) | src/packet.rs |
 
 ## Fields (s+num)
 

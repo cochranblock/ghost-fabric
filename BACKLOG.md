@@ -9,7 +9,7 @@
 
 ---
 
-1. [feature] Mesh packet types — CBOR-encoded frames (<200 bytes) for LoRa. Use kova Factory (T181) to generate. **Blocks:** all mesh networking.
+1. ~~[feature] Mesh packet types~~ — DONE. T12 Frame, T13 FrameKind, T14 Payload. CBOR via ciborium. Beacon/Data/Ack/Ping/Pong. 9 tests.
 2. [feature] Main loop integration — wire PeerTable (T9) + RadioDriver (T1) into `start` command. Poll radio, update peers, score routes.
 3. [test] Integration tests — end-to-end: init → start → inject mock packets → verify peer table updates → shutdown. Currently 0 integration tests.
 4. [feature] Unix domain socket radio driver — implements T1 over UDS for local multi-process mesh testing without hardware.

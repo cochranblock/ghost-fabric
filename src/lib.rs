@@ -2,6 +2,7 @@ pub mod config;
 pub mod inference;
 pub mod lifecycle;
 pub mod mesh;
+pub mod packet;
 pub mod radio;
 pub mod sensor;
 
