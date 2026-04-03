@@ -30,6 +30,7 @@ ghost-fabric start     # start mesh node (Ctrl+C to stop)
 - **Config validation**: LoRa spec enforcement (SF 6-12, valid bandwidths, frequency range)
 - **Android app**: NativeActivity + egui, auto-inits node on launch
 - **P13 tokenization**: compressed symbol names per Kova conventions
+- **P23 Triple Lens**: architecture decisions validated via optimist/pessimist/paranoia lenses + synthesis
 
 ## Subsystem Traits
 
