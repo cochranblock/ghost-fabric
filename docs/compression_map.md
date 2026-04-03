@@ -21,12 +21,24 @@
 | f14 | acquire (PID lock + SIGTERM old) | src/lifecycle.rs |
 | f15 | signal_old (SIGTERM/SIGKILL) | src/lifecycle.rs |
 | f16 | release (remove PID lockfile) | src/lifecycle.rs |
+| f17 | validate (check config LoRa spec) | src/config.rs |
 
 ## Types (t+num)
 
 | Token | Name | Location |
 |-------|------|----------|
 | T0 | NodeConfig | src/config.rs |
+| T1 | RadioDriver (trait) | src/radio.rs |
+| T2 | MeshNetwork (trait) | src/mesh.rs |
+| T3 | Peer | src/mesh.rs |
+| T4 | SensorDriver (trait) | src/sensor.rs |
+| T5 | SensorReading | src/sensor.rs |
+| T6 | InferenceEngine (trait) | src/inference.rs |
+| T7 | Prediction | src/inference.rs |
+| T8 | MockRadio | src/radio.rs |
+| T9 | PeerTable | src/mesh.rs |
+| T10 | MockSensor | src/sensor.rs |
+| T11 | MockEngine | src/inference.rs |
 
 ## Fields (s+num)
 
@@ -36,6 +48,7 @@
 | s1 | frequency_mhz | u32 | T0 |
 | s2 | spreading_factor | u8 | T0 |
 | s3 | bandwidth_khz | u32 | T0 |
+| s4 | peers | Vec\<String\> | T0 |
 
 ## Error Variants (E+num)
 

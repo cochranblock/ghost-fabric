@@ -1,5 +1,7 @@
 use clap::{Parser, Subcommand};
 use ghost_fabric_core::{config, lifecycle, radio, mesh, inference, sensor};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 /// Ghost Fabric — sovereign edge intelligence over sub-GHz cognitive mesh
 #[derive(Parser)]
@@ -45,6 +47,11 @@ fn f1() {
         }
     };
 
+    if let Err(e) = config::f17(&cfg) {
+        eprintln!("Invalid config: {}", e);
+        std::process::exit(1);
+    }
+
     // Hot reload: acquire PID lock, SIGTERM old instance
     lifecycle::f14();
     println!("PID {} acquired lock at {}", std::process::id(), lifecycle::f13().display());
@@ -57,10 +64,54 @@ fn f1() {
     println!("  mesh:      {}", mesh::f6());
     println!("  inference: {}", inference::f7());
     println!("  sensor:    {}", sensor::f8());
-    println!("\nNode ready. Waiting for implementation.");
 
-    // Clean up PID on exit
+    // Main loop — runs until SIGINT (Ctrl+C)
+    let running = Arc::new(AtomicBool::new(true));
+    let r = running.clone();
+    ctrlc_handler(r);
+
+    println!("\nNode running. Press Ctrl+C to stop.");
+    while running.load(Ordering::SeqCst) {
+        std::thread::sleep(std::time::Duration::from_secs(1));
+    }
+
+    println!("\nShutting down...");
     lifecycle::f16();
+    println!("Node {} stopped.", cfg.node_id);
+}
+
+fn ctrlc_handler(running: Arc<AtomicBool>) {
+    #[cfg(unix)]
+    {
+        // Use libc directly — no extra deps
+        unsafe {
+            libc::signal(libc::SIGINT, sigint_handler as *const () as libc::sighandler_t);
+        }
+        // Store the flag in a static for the signal handler
+        RUNNING_FLAG.store(
+            Arc::into_raw(running) as usize,
+            Ordering::SeqCst,
+        );
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = running;
+    }
+}
+
+#[cfg(unix)]
+static RUNNING_FLAG: std::sync::atomic::AtomicUsize =
+    std::sync::atomic::AtomicUsize::new(0);
+
+#[cfg(unix)]
+extern "C" fn sigint_handler(_sig: libc::c_int) {
+    let ptr = RUNNING_FLAG.load(Ordering::SeqCst);
+    if ptr != 0 {
+        let flag = unsafe { Arc::from_raw(ptr as *const AtomicBool) };
+        flag.store(false, Ordering::SeqCst);
+        // Leak it back so the main thread can still read it
+        let _ = Arc::into_raw(flag);
+    }
 }
 
 /// f2=status — display node identity and config
