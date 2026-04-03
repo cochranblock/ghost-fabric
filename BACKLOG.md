@@ -11,7 +11,7 @@
 
 1. ~~[feature] Mesh packet types~~ — DONE. T12 Frame, T13 FrameKind, T14 Payload. CBOR via ciborium. Beacon/Data/Ack/Ping/Pong. 9 tests.
 2. ~~[feature] Main loop integration~~ — DONE. MockRadio + PeerTable wired into start. 10s beacon, radio poll, 60s stale eviction, f22 frame handler.
-3. [test] Integration tests — end-to-end: init → start → inject mock packets → verify peer table updates → shutdown. Currently 0 integration tests.
+3. ~~[test] Integration tests~~ — DONE. 8 integration tests: config round-trip, radio→peer pipeline, multi-peer routing, ping/pong, sensor→frame, inference→frame, TTL relay, config validation.
 4. [feature] Unix domain socket radio driver — implements T1 over UDS for local multi-process mesh testing without hardware.
 5. [research] Routing algorithm variants — use kova MoE to generate 3 competing mesh routing strategies, score against packet loss / latency / battery drain.
 6. [feature] Mesh state sync — compressed neighbor table broadcast on reconnection. Peers share who they know.
