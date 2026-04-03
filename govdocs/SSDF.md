@@ -20,14 +20,14 @@
 | PW.4 — Reuse existing well-secured components | In place | All deps are high-trust crates.io packages (clap, serde, rand) — see SBOM.md |
 | PW.5 — Create source code following secure practices | In place | Rust's ownership model prevents use-after-free, buffer overflows, data races at compile time |
 | PW.6 — Configure compilation/build to improve security | In place | Release profile: LTO, single codegen unit, panic=abort (no unwinding attack surface), stripped symbols |
-| PW.7 — Review and verify third-party components | Partial | Cargo.lock pins versions; manual audit not yet performed |
-| PW.9 — Test executable code | Partial | Build succeeds, clippy passes with -D warnings; no unit/integration tests yet |
+| PW.7 — Review and verify third-party components | In place | Cargo.lock pins versions; deep code review performed (see SUPPLY_CHAIN_AUDIT.md), `cargo audit` 0 CVEs |
+| PW.9 — Test executable code | Partial | Build succeeds, clippy -D warnings clean; 35 unit tests (radio 7, mesh 11, inference 6, sensor 4, config 7). Integration tests not yet implemented. |
 
 ## RV — Respond to Vulnerabilities
 
 | Practice | Status | Evidence |
 |----------|--------|----------|
-| RV.1 — Identify and confirm vulnerabilities | Planned | `cargo audit` not yet integrated; zero CVEs in current dep set |
+| RV.1 — Identify and confirm vulnerabilities | In place | `cargo audit` run (0 CVEs), deep code review of all 7 deps (see SUPPLY_CHAIN_AUDIT.md) |
 | RV.2 — Assess and prioritize vulnerabilities | Planned | No vulnerability tracking process yet |
 | RV.3 — Remediate vulnerabilities | In place | Cargo.lock pinning + `cargo update` workflow available |
 
@@ -41,4 +41,4 @@
 
 ## Summary
 
-Ghost-fabric is early-stage. The Rust language provides strong baseline security (memory safety, type safety, no undefined behavior). The build pipeline enforces zero warnings. Supply chain is minimal (5 direct deps, all permissive). Primary gaps: no `cargo audit`, no signed releases, no test suite.
+Ghost-fabric is early-stage. The Rust language provides strong baseline security (memory safety, type safety, no undefined behavior). The build pipeline enforces zero warnings. Supply chain is minimal (6 direct deps, all permissive), audited with `cargo audit` (0 CVEs) and deep code review. 35 unit tests cover all subsystem traits. Primary gaps: no signed releases, no integration tests.

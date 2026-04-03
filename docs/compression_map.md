@@ -1,3 +1,5 @@
+<!-- Unlicense — cochranblock.org -->
+
 # Ghost Fabric — Compression Map (P13)
 
 ## Functions (f+num)
@@ -28,12 +30,12 @@
 | Token | Name | Location |
 |-------|------|----------|
 | T0 | NodeConfig | src/config.rs |
-| T1 | RadioDriver (trait) | src/radio.rs |
-| T2 | MeshNetwork (trait) | src/mesh.rs |
+| T1 | RadioDriver | src/radio.rs |
+| T2 | MeshNetwork | src/mesh.rs |
 | T3 | Peer | src/mesh.rs |
-| T4 | SensorDriver (trait) | src/sensor.rs |
+| T4 | SensorDriver | src/sensor.rs |
 | T5 | SensorReading | src/sensor.rs |
-| T6 | InferenceEngine (trait) | src/inference.rs |
+| T6 | InferenceEngine | src/inference.rs |
 | T7 | Prediction | src/inference.rs |
 | T8 | MockRadio | src/radio.rs |
 | T9 | PeerTable | src/mesh.rs |

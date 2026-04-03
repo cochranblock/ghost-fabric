@@ -95,6 +95,21 @@ Updated README with quick start and govdocs reference.
 **What:** Synced all documentation with current state. README: added platforms table, features list. TOI: added 4 missing entries. POA: updated LOC (328), files (8), functions (16), deps (6), binary size (470,080). SBOM: added libc as direct dep.
 **Commit:** `04e115e`
 
+### 2026-04-02 — Phase 1: Subsystem Traits, Mocks, 35 Tests, SIGINT Handler
+
+**What:** Replaced stub modules with real trait definitions, mock implementations, and unit tests:
+1. **Radio:** T1 (RadioDriver) trait — init/send/recv/status. T8 (MockRadio) with TX/RX buffers. 7 tests.
+2. **Mesh:** T2 (MeshNetwork) trait — add_peer/remove_peer/route/peers. T3 (Peer) struct. T9 (PeerTable) with RSSI+battery+freshness route scoring, stale peer eviction. 11 tests.
+3. **Inference:** T6 (InferenceEngine) trait — load_model/predict. T11 (MockEngine). 6 tests.
+4. **Sensor:** T4 (SensorDriver) trait — read/status/name. T10 (MockSensor). 4 tests.
+5. **Config:** added peers field (backward compat), f17 LoRa spec validation (SF 6-12, valid BW, freq 150-960MHz). 7 tests.
+6. **Main loop:** `start` command now runs a main loop with SIGINT handler for clean Ctrl+C shutdown.
+
+Updated P13 compression map: f0-f17, T0-T11, s0-s4, c0-c2. LOC: 328 → 1,101.
+**Commit:** `673b202`
+**QA Result:** `cargo build` PASS, `cargo clippy -- -D warnings` zero warnings, `cargo test` 35/35 pass.
+**AI Role:** AI implemented all traits, mocks, and tests. Human directed the architecture and approved the plan.
+
 ---
 
 *Part of the [CochranBlock](https://cochranblock.org) zero-cloud architecture. All source under the Unlicense.*

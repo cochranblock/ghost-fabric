@@ -60,7 +60,13 @@ Rust provides compile-time guarantees against:
 - Data races
 - Null pointer dereference (no null — uses `Option<T>`)
 
-No `unsafe` blocks in ghost-fabric core source code. The Android wrapper (`android/src/lib.rs`) contains one `unsafe` block for `std::env::set_var` (required by Rust edition 2024 — sets HOME path for config resolution on Android).
+Core source code contains 6 `unsafe` blocks:
+- `lifecycle.rs`: 4 calls to `libc::kill()` for hot reload (process check, SIGTERM, alive check, SIGKILL)
+- `main.rs`: 2 blocks for SIGINT handler (register signal via `libc::signal()`, read atomic flag in handler)
+
+Android wrapper adds 1 `unsafe` block for `std::env::set_var` (Rust edition 2024 — sets HOME path for config resolution).
+
+**Total: 7 unsafe blocks**, all for OS signal handling. No unsafe in user-facing I/O paths.
 
 ## Known Vulnerabilities
 
