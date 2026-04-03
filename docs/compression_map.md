@@ -49,6 +49,7 @@
 | T12 | Frame (wire format) | src/packet.rs |
 | T13 | FrameKind (packet type tag) | src/packet.rs |
 | T14 | Payload (typed variants) | src/packet.rs |
+| T15 | UdsRadio (Unix domain socket) | src/uds_radio.rs |
 
 ## Fields (s+num)
 

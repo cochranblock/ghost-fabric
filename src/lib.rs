@@ -5,6 +5,8 @@ pub mod mesh;
 pub mod packet;
 pub mod radio;
 pub mod sensor;
+#[cfg(unix)]
+pub mod uds_radio;
 
 /// f10=node_status_string — returns full node status as a string
 pub fn f10() -> String {
