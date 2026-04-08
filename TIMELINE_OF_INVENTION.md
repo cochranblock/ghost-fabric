@@ -8,6 +8,39 @@
 
 ---
 
+## Human Revelations — Invented Techniques
+
+*Novel ideas that came from human insight, not AI suggestion. These are original contributions to the field.*
+
+### RSSI/Battery/Hop Route Scoring for LoRa Mesh (April 2026)
+
+**Invention:** A mesh routing algorithm that scores routes using a weighted combination of signal strength (RSSI), battery level, hop count, and freshness — choosing routes through nodes that are strong-signal, well-powered, close, and recently seen, rather than just shortest-path.
+
+**The Problem:** Standard mesh routing (AODV, DSR) uses hop count as the primary metric. In LoRa networks operating at 915MHz, this fails: a 2-hop route through a node with -120dBm signal and 5% battery is worse than a 3-hop route through strong, charged nodes. Shortest path isn't best path when nodes are solar-powered sensors in a field.
+
+**The Insight:** Military radio networks don't route through the closest relay — they route through the strongest, most reliable relay. A forward observer with a weak radio and a dying battery is a worse relay than a base station 2 hops away. Signal quality, power state, and recency all matter more than hop count for edge networks.
+
+**The Technique:**
+1. `PeerTable` (T9): maintains peer list with RSSI, battery, last_seen per peer
+2. Route scoring: weighted formula combining RSSI (signal quality), battery (power remaining), hop count (distance), and freshness (time since last contact)
+3. Stale peer eviction: peers not seen within threshold are removed from routing table
+4. Each routing decision picks the peer with the best composite score, not the fewest hops
+5. 11 unit tests validate scoring edge cases
+
+**Result:** Routes prefer strong-signal, well-powered, recently-seen nodes. Dying or unreachable nodes are automatically evicted. The mesh self-heals as nodes come and go.
+
+**Named:** Composite Route Scoring
+**Commit:** `673b202` (P23 Phase 1 implementation)
+**Origin:** Military radio relay operations — choosing which hilltop to relay through based on signal strength, power, and reliability, not just distance. Michael Cochran's Army signals experience applied to sub-GHz IoT mesh networking.
+
+### 2026-04-08 — Human Revelations Documentation Pass
+
+**What:** Documented novel human-invented techniques across the full CochranBlock portfolio. Added Human Revelations section with Composite Route Scoring.
+**Commit:** See git log
+**AI Role:** AI formatted and wrote the sections. Human identified which techniques were genuinely novel, provided the origin stories, and directed the documentation pass.
+
+---
+
 ## Entries
 
 ### 2026-03-26 — Ghost Fabric Whitepaper + Rust Scaffold
