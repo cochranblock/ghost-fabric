@@ -223,6 +223,7 @@ mod tests {
     #[test]
     fn uds_cbor_frame_round_trip() {
         use crate::packet;
+        const KEY: [u8; 32] = [0x77u8; 32];
 
         let id = std::process::id();
         let name_a = format!("gf-test-cbor-{}-a", id);
@@ -232,14 +233,14 @@ mod tests {
         node_a.init(915, 7, 125).unwrap();
         node_b.init(915, 7, 125).unwrap();
 
-        // A sends directly to B
+        // A encodes with key and sends directly to B
         let beacon = packet::T12::f20(&name_a, 90, 1, 1);
-        let bytes = packet::f18(&beacon).unwrap();
+        let bytes = packet::f18(&beacon, &KEY).unwrap();
         node_a.send_to(&bytes, &name_b).unwrap();
 
-        // B receives and decodes
+        // B receives and decodes with same key
         let data = node_b.recv(100).unwrap().unwrap();
-        let frame = packet::f19(&data).unwrap();
+        let frame = packet::f19(&data, &KEY).unwrap();
         assert_eq!(frame.src, name_a);
         assert_eq!(frame.kind, packet::T13::Beacon);
     }

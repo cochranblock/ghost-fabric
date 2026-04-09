@@ -9,6 +9,10 @@ use ghost_fabric_core::radio::{self, T1};
 use ghost_fabric_core::sensor::{self, T4};
 use ghost_fabric_core::inference::{self, T6};
 
+/// Shared test key — all integration tests use this.
+const TEST_KEY: [u8; 32] = [0x55u8; 32];
+const OTHER_KEY: [u8; 32] = [0xAAu8; 32];
+
 /// Init config to temp dir, reload it, verify identity persists.
 #[test]
 fn config_init_reload() {
@@ -26,7 +30,7 @@ fn config_init_reload() {
     assert_eq!(id1, id2);
 }
 
-/// Full pipeline: radio init → send beacon → decode → update peers.
+/// Full pipeline: radio init → encode with key → send → decode with key → update peers.
 #[test]
 fn radio_to_peer_table_pipeline() {
     let mut radio = radio::T8::new();
@@ -37,14 +41,14 @@ fn radio_to_peer_table_pipeline() {
 
     // Simulate node "gf-remote" sending a beacon
     let beacon = packet::T12::f20("gf-remote", 85, 1, 1);
-    let bytes = packet::f18(&beacon).unwrap();
+    let bytes = packet::f18(&beacon, &TEST_KEY).unwrap();
 
     // Inject into radio RX buffer
     radio.inject_rx(bytes, -72);
 
     // Receive and process
     let data = radio.recv(1000).unwrap().unwrap();
-    let frame = packet::f19(&data).unwrap();
+    let frame = packet::f19(&data, &TEST_KEY).unwrap();
 
     assert_eq!(frame.src, "gf-remote");
     assert_eq!(frame.kind, packet::T13::Beacon);
@@ -95,17 +99,17 @@ fn ping_pong_discovery() {
 
     // Send ping
     let ping = packet::T12::ping("gf-local", 1);
-    let ping_bytes = packet::f18(&ping).unwrap();
+    let ping_bytes = packet::f18(&ping, &TEST_KEY).unwrap();
     radio.send(&ping_bytes).unwrap();
 
     // Simulate remote sending pong
     let pong = packet::T12::pong("gf-remote", "gf-local", 95, 2, 1);
-    let pong_bytes = packet::f18(&pong).unwrap();
+    let pong_bytes = packet::f18(&pong, &TEST_KEY).unwrap();
     radio.inject_rx(pong_bytes, -65);
 
     // Process pong
     let data = radio.recv(1000).unwrap().unwrap();
-    let frame = packet::f19(&data).unwrap();
+    let frame = packet::f19(&data, &TEST_KEY).unwrap();
     assert_eq!(frame.kind, packet::T13::Pong);
 
     if let packet::T14::Pong { battery_pct, .. } = frame.payload {
@@ -124,8 +128,8 @@ fn sensor_to_data_frame() {
     let reading = sensor.read().unwrap();
 
     let frame = packet::T12::f21("gf-local", "gf-remote", &reading.name, reading.value, &reading.unit, 1);
-    let bytes = packet::f18(&frame).unwrap();
-    let decoded = packet::f19(&bytes).unwrap();
+    let bytes = packet::f18(&frame, &TEST_KEY).unwrap();
+    let decoded = packet::f19(&bytes, &TEST_KEY).unwrap();
 
     assert_eq!(decoded.kind, packet::T13::Data);
     if let packet::T14::Data { name, value, unit } = decoded.payload {
@@ -152,10 +156,10 @@ fn inference_to_data_frame() {
         &top.label, top.confidence as f64, "confidence",
         1,
     );
-    let bytes = packet::f18(&frame).unwrap();
+    let bytes = packet::f18(&frame, &TEST_KEY).unwrap();
     assert!(bytes.len() < packet::MAX_FRAME_BYTES);
 
-    let decoded = packet::f19(&bytes).unwrap();
+    let decoded = packet::f19(&bytes, &TEST_KEY).unwrap();
     assert!(decoded.is_broadcast());
 }
 
@@ -169,10 +173,10 @@ fn ttl_relay_chain() {
     let beacon = packet::T12::f20("gf-origin", 80, 1, 1);
     assert_eq!(beacon.ttl, 3);
 
-    let bytes = packet::f18(&beacon).unwrap();
+    let bytes = packet::f18(&beacon, &TEST_KEY).unwrap();
     radio.inject_rx(bytes, -80);
     let data = radio.recv(0).unwrap().unwrap();
-    let mut frame = packet::f19(&data).unwrap();
+    let mut frame = packet::f19(&data, &TEST_KEY).unwrap();
 
     // Relay hop 1: TTL 3→2
     assert!(frame.relay_hop());
@@ -200,7 +204,7 @@ fn sync_state_propagation() {
     assert_eq!(entries.len(), 2);
 
     let sync_frame = packet::T12::f23("gf-node-a", entries, 1);
-    let bytes = packet::f18(&sync_frame).unwrap();
+    let bytes = packet::f18(&sync_frame, &TEST_KEY).unwrap();
     assert!(bytes.len() < packet::MAX_FRAME_BYTES);
 
     // Frame transmitted over radio
@@ -208,9 +212,9 @@ fn sync_state_propagation() {
     radio.init(915, 7, 125).unwrap();
     radio.send(&bytes).unwrap();
 
-    // Node B receives it
+    // Node B receives it — same key, decodes fine
     let tx = radio.drain_tx();
-    let received = packet::f19(&tx[0]).unwrap();
+    let received = packet::f19(&tx[0], &TEST_KEY).unwrap();
     assert_eq!(received.kind, packet::T13::Sync);
 
     // Node B imports the peer table
@@ -244,6 +248,65 @@ fn sync_dedup_existing_peers() {
     let added = node_b.f25(&entries, "gf-node-a");
     assert_eq!(added, 1);
     assert_eq!(node_b.peer_count(), 2);
+}
+
+/// Wrong key: frame from node with different secret is rejected.
+#[test]
+fn wrong_key_frame_rejected_end_to_end() {
+    let mut radio = radio::T8::new();
+    radio.init(915, 7, 125).unwrap();
+
+    // Attacker sends beacon with their own key
+    let beacon = packet::T12::f20("gf-attacker", 100, 1, 1);
+    let attacker_bytes = packet::f18(&beacon, &OTHER_KEY).unwrap();
+    radio.inject_rx(attacker_bytes, -60);
+
+    // Legitimate node tries to decode with correct key — must fail
+    let data = radio.recv(0).unwrap().unwrap();
+    let result = packet::f19(&data, &TEST_KEY);
+    assert!(result.is_err());
+    assert_eq!(result.unwrap_err(), "MAC verification failed");
+}
+
+/// Tampered frame: bit-flip in CBOR payload is caught by MAC.
+#[test]
+fn tampered_frame_rejected_end_to_end() {
+    let beacon = packet::T12::f20("gf-legit", 90, 1, 1);
+    let mut bytes = packet::f18(&beacon, &TEST_KEY).unwrap();
+
+    // Flip a bit in the CBOR body (not the MAC)
+    let mid = (bytes.len() - packet::MAC_BYTES) / 2;
+    bytes[mid] ^= 0x01;
+
+    assert!(packet::f19(&bytes, &TEST_KEY).is_err());
+}
+
+/// HKDF key derivation: same secret → same key; different → different.
+#[test]
+fn hkdf_key_derivation() {
+    let k1 = packet::f26(b"mesh-secret-alpha");
+    let k2 = packet::f26(b"mesh-secret-alpha");
+    let k3 = packet::f26(b"mesh-secret-beta");
+    assert_eq!(k1, k2);
+    assert_ne!(k1, k3);
+}
+
+/// Config: network_secret field round-trips through JSON.
+#[test]
+fn config_network_secret_round_trip() {
+    let mut cfg = config::T0::default();
+    cfg.network_secret = "my-secret".to_string();
+    let json = serde_json::to_string(&cfg).unwrap();
+    let loaded: config::T0 = serde_json::from_str(&json).unwrap();
+    assert_eq!(loaded.network_secret, "my-secret");
+}
+
+/// Config: old configs without network_secret field default to empty string.
+#[test]
+fn config_network_secret_backward_compat() {
+    let json = r#"{"node_id":"gf-test","frequency_mhz":915,"spreading_factor":7,"bandwidth_khz":125}"#;
+    let cfg: config::T0 = serde_json::from_str(json).unwrap();
+    assert_eq!(cfg.network_secret, "");
 }
 
 /// Config validation rejects out-of-spec parameters.

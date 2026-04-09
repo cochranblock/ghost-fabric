@@ -12,6 +12,11 @@ pub struct T0 {
     pub bandwidth_khz: u32,
     #[serde(default)]
     pub peers: Vec<String>,
+    /// Shared mesh secret — all nodes must use the same value.
+    /// Frames signed with a different secret are rejected.
+    /// Empty string = open mesh (no secret, but still MAC-protected from random corruption).
+    #[serde(default)]
+    pub network_secret: String,
 }
 
 impl Default for T0 {
@@ -24,6 +29,7 @@ impl Default for T0 {
             spreading_factor: 7,
             bandwidth_khz: 125,
             peers: Vec::new(),
+            network_secret: String::new(),
         }
     }
 }

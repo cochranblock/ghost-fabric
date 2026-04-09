@@ -60,6 +60,7 @@ fn f1() {
 
     println!("Starting node: {}", cfg.node_id);
     println!("Radio: {} MHz, SF{}", cfg.frequency_mhz, cfg.spreading_factor);
+    let mesh_key = packet::f26(cfg.network_secret.as_bytes());
 
     // Initialize subsystems
     let mut mock_radio = radio::T8::new();
@@ -86,7 +87,7 @@ fn f1() {
         // Every 10s: broadcast beacon
         if tick.is_multiple_of(10) {
             let beacon = packet::T12::f20(&cfg.node_id, 100, 1, seq);
-            if let Ok(bytes) = packet::f18(&beacon) {
+            if let Ok(bytes) = packet::f18(&beacon, &mesh_key) {
                 let _ = mock_radio.send(&bytes);
                 seq = seq.wrapping_add(1);
             }
@@ -94,16 +95,16 @@ fn f1() {
 
         // Poll radio for incoming packets
         if let Ok(Some(data)) = mock_radio.recv(0)
-            && let Ok(frame) = packet::f19(&data)
+            && let Ok(frame) = packet::f19(&data, &mesh_key)
         {
-            f22(&frame, &cfg.node_id, &mut peer_table, &mut mock_radio, &mut seq);
+            f22(&frame, &cfg.node_id, &mut peer_table, &mut mock_radio, &mut seq, &mesh_key);
         }
 
         // Every 30s: broadcast neighbor table sync when we have peers
         if tick.is_multiple_of(30) && tick > 0 && peer_table.peer_count() > 0 {
             let entries = peer_table.f24();
             let sync = packet::T12::f23(&cfg.node_id, entries, seq);
-            if let Ok(bytes) = packet::f18(&sync) {
+            if let Ok(bytes) = packet::f18(&sync, &mesh_key) {
                 let _ = mock_radio.send(&bytes);
                 seq = seq.wrapping_add(1);
             }
@@ -169,6 +170,7 @@ fn f22(
     peers: &mut mesh::T9,
     radio: &mut radio::T8,
     seq: &mut u16,
+    key: &[u8; 32],
 ) {
     // Ignore our own frames
     if frame.src == my_id {
@@ -196,7 +198,7 @@ fn f22(
                 peers.peer_count() as u8,
                 *seq,
             );
-            if let Ok(bytes) = packet::f18(&pong) {
+            if let Ok(bytes) = packet::f18(&pong, key) {
                 let _ = radio.send(&bytes);
                 *seq = seq.wrapping_add(1);
             }
@@ -234,7 +236,7 @@ fn f22(
     if frame.is_broadcast() && frame.should_relay() {
         let mut relay = frame.clone();
         if relay.relay_hop()
-            && let Ok(bytes) = packet::f18(&relay)
+            && let Ok(bytes) = packet::f18(&relay, key)
         {
             let _ = radio.send(&bytes);
         }
