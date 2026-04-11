@@ -152,6 +152,30 @@ Updated P13 compression map: f0-f17, T0-T11, s0-s4, c0-c2. LOC: 328 → 1,101.
 **QA Result:** `cargo build` PASS, `cargo clippy -- -D warnings` zero warnings, `cargo test` 35/35 pass.
 **AI Role:** AI performed P23 audit and implemented all traits, mocks, and tests. Human directed the audit scope and approved the plan.
 
+### 2026-04-09 — Packet Authentication: HMAC-SHA256 on Every T12 Frame
+
+**What:** Top backlog item shipped — every mesh frame now carries a 16-byte truncated HMAC-SHA256 tag derived from a shared `network_secret` via HKDF-SHA256. Frames with a wrong key, tampered CBOR, or tampered tag are rejected at `f19` before CBOR decode. Closes the spoofing, peer-table-poisoning, and ping-amplification attack surface against unauthenticated mesh broadcasts.
+
+**Why:** Pre-auth, any RF attacker on the 915MHz band could inject a beacon claiming any node ID, poison every neighbor's PeerTable, or amplify pings into broadcast storms. T12 was a wide-open trust boundary. Federal deployments (CMMC, SSDF PO.4) require authenticated message origin on tactical networks.
+
+**Implementation:**
+1. **Deps:** `hmac` 0.12, `sha2` 0.10, `hkdf` 0.12 — pure-Rust, RustCrypto family, no `unsafe`
+2. **`f26` (HKDF):** derives a 32-byte mesh key from `network_secret` bytes using `HKDF-SHA256` with `info = b"ghost-fabric mesh v1"`
+3. **`f18` (encode):** CBOR-encodes the frame, computes HMAC-SHA256 over the CBOR bytes, appends the first 16 bytes (truncated tag) — wire format: `[CBOR][16-byte MAC]`
+4. **`f19` (decode):** splits off the trailing 16 bytes, recomputes HMAC over the CBOR region, verifies via `verify_truncated_left` (constant-time), then CBOR-decodes only on MAC success
+5. **`T0::network_secret`:** new config field, `#[serde(default)]` for backward compatibility with existing `node.json` files (empty string = open mesh, still MAC-protected from random radio corruption)
+6. **Main loop:** derives the key once at startup, threads it through every `f18` send and `f19` recv (beacon, poll, sync, relay)
+7. **13 new tests:** wrong-key rejection, CBOR tamper rejection, MAC tamper rejection, truncation rejection, garbage rejection, empty input, HKDF determinism, end-to-end attacker injection, config round-trip + back-compat
+8. **Frame budget:** MAX_CBOR_BYTES = 251 - 16 = 235 — leaves 16 bytes of headroom inside the LoRa 255-byte limit for the MAC
+
+**Bugs found and fixed during wire-up:**
+- `T0::default()` was missing the new `network_secret` field — wouldn't compile
+- `f19` initially used `mac.verify_slice()`, which requires the *full* 32-byte HMAC; we append only 16 bytes, so every round-trip silently failed. Fixed to `verify_truncated_left()`. Caught because the round-trip tests panicked with "MAC verification failed" while the negative tests (which expect failure) all passed — a textbook case of asymmetric test coverage exposing the bug.
+
+**Commit:** `e5e7de8`
+**QA Result:** `cargo check` PASS, `cargo test` 118/118 pass (103 unit + 15 integration).
+**AI Role:** AI implemented the HMAC wire format, wired the key through main loop and UDS radio, wrote all 13 auth tests, diagnosed the `verify_slice` vs `verify_truncated_left` bug from the asymmetric failure pattern. Human directed the priority (top backlog item) and approved the design (16-byte truncated tag, HKDF-derived key).
+
 ---
 
 *Part of the [CochranBlock](https://cochranblock.org) zero-cloud architecture. All source under the Unlicense.*

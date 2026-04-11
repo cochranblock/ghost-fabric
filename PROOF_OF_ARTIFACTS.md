@@ -4,7 +4,7 @@
 
 *Visual and structural evidence that this project works, ships, and is real.*
 
-> Edge intelligence scaffold with CLI, node identity, subsystem traits, 35 unit tests, and federal compliance documentation.
+> Edge intelligence scaffold with CLI, node identity, subsystem traits, HMAC-authenticated mesh frames, 118 tests, and federal compliance documentation.
 
 ## Architecture
 
@@ -55,13 +55,14 @@ flowchart LR
 | Metric | Value |
 |--------|-------|
 | Rust LOC (src/) | 1,101 |
-| Source files | 8 (main.rs, lib.rs, config.rs, lifecycle.rs, radio.rs, mesh.rs, inference.rs, sensor.rs) |
-| Public functions (P13 tokenized) | 17 (f0–f17) |
-| Types (P13 tokenized) | 12 (T0–T11 including traits + mocks) |
+| Source files | 10 (main.rs, lib.rs, config.rs, lifecycle.rs, radio.rs, mesh.rs, inference.rs, sensor.rs, packet.rs, uds_radio.rs) |
+| Public functions (P13 tokenized) | 26 (f0–f26) |
+| Types (P13 tokenized) | 16 (T0–T16 including traits + mocks) |
 | Fields (P13 tokenized) | 5 (s0–s4 including peers) |
 | CLI commands | 3 (init, start, status) |
-| Unit tests | 35 (config 7, radio 7, mesh 11, inference 6, sensor 4) |
-| Direct dependencies | 6 (clap, dirs, libc, rand, serde, serde_json) |
+| Unit tests | 103 (config 29, radio 22, packet 19, mesh 17, uds_radio 6, inference 6, sensor 4) |
+| Integration tests | 15 |
+| Direct dependencies | 9 (clap, dirs, libc, rand, serde, serde_json, hmac, sha2, hkdf) |
 | Transitive dependencies | ~49 |
 | `unsafe` blocks (core) | 6 (lifecycle.rs: 4 libc::kill, main.rs: 2 SIGINT handler) |
 | `unsafe` blocks (android) | 1 (set_var for HOME path) |
@@ -70,12 +71,35 @@ flowchart LR
 
 | Subsystem | Trait | Mock | Tests | Status |
 |-----------|-------|------|-------|--------|
-| Radio | T1 (RadioDriver) | T8 (MockRadio) | 7 | Trait defined, no hardware driver |
-| Mesh | T2 (MeshNetwork) | T9 (PeerTable) | 11 | In-memory peer table with route scoring |
+| Radio | T1 (RadioDriver) | T8 (MockRadio), T15 (UdsRadio) | 22 | Trait + UDS multi-process driver |
+| Mesh | T2 (MeshNetwork) | T9 (PeerTable) | 17 | Route scoring + state sync (f23/f24/f25) |
 | Sensor | T4 (SensorDriver) | T10 (MockSensor) | 4 | Trait defined, no GPIO/I2C/SPI driver |
 | Inference | T6 (InferenceEngine) | T11 (MockEngine) | 6 | Trait defined, no Candle integration |
-| Config | — | — | 7 | Validation + LoRa spec checking (f17) |
-| **Total** | — | — | **35** | All tests passing |
+| Packet | T12/T13/T14/T16 | — | 19 | CBOR frames + HMAC-SHA256 auth (f18/f19/f26) |
+| Config | T0 | — | 29 | Validation, LoRa spec, network_secret |
+| UDS Radio | T15 (UdsRadio) | — | 6 | Unix domain socket driver for multi-process mesh |
+| Integration | — | — | 15 | End-to-end pipeline + auth + sync |
+| **Total** | — | — | **118** | All tests passing |
+
+## Packet Authentication
+
+Every T12 mesh frame is HMAC-SHA256 authenticated. Wire format: `[CBOR bytes][16-byte truncated MAC]`.
+
+| Property | Value |
+|----------|-------|
+| Algorithm | HMAC-SHA256, truncated to 128 bits |
+| Key derivation | HKDF-SHA256 from `network_secret` config field |
+| HKDF info | `b"ghost-fabric mesh v1"` |
+| MAC size | 16 bytes (128 bits) — appended after CBOR |
+| Max CBOR payload | 235 bytes (251 total - 16 MAC) |
+| Verification | Constant-time via `verify_truncated_left` |
+| Dependencies | `hmac` 0.12, `sha2` 0.10, `hkdf` 0.12 (pure-Rust RustCrypto, no `unsafe`) |
+
+**Threat mitigations:**
+- Source spoofing — attacker can't forge valid MAC without the mesh key
+- Peer table poisoning — injected beacons/syncs fail MAC check at `f19`
+- Ping amplification — unauthenticated pings are dropped before pong generation
+- CBOR corruption — any bit flip in transit triggers MAC mismatch
 
 ## QA Results
 
@@ -121,12 +145,25 @@ flowchart LR
 | `ghost-fabric start` + Ctrl+C | PASS — SIGINT handler, clean shutdown |
 | Config validation | PASS — rejects invalid SF, BW, freq |
 
+### Packet Auth QA (2026-04-09)
+
+| Check | Result |
+|-------|--------|
+| `cargo check` | PASS — zero errors |
+| `cargo test` | PASS — 118 tests (103 unit + 15 integration) |
+| Wrong-key rejection | PASS — `f19` returns "MAC verification failed" |
+| Tampered CBOR rejection | PASS — single bit flip caught by MAC |
+| Tampered MAC rejection | PASS — modified tag caught |
+| Truncated frame rejection | PASS — frames < 16 bytes rejected |
+| HKDF determinism | PASS — same secret → same key |
+| Config back-compat | PASS — old `node.json` without `network_secret` defaults to `""` |
+
 ## P13 Tokenization Stats
 
 | Category | Count | Range |
 |----------|-------|-------|
-| Functions | 17 | f0–f17 |
-| Types | 12 | T0–T11 |
+| Functions | 26 | f0–f26 |
+| Types | 16 | T0–T16 |
 | Fields | 5 | s0–s4 |
 | CLI commands | 3 | c0–c2 |
 | Error variants | 0 | — |
