@@ -1,0 +1,4 @@
+# P27 Diamond Binary Sizes — ghost-fabric
+# Each line: date | profile | bytes | notes
+2026-04-19 | diamond-edge | 651472 | initial pressure pass (opt-level=s, fat LTO, strip)
+2026-04-19 | diamond      | 717264 | initial pressure pass (opt-level=3, fat LTO, strip)

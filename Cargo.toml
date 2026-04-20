@@ -36,3 +36,33 @@ lto = true
 codegen-units = 1
 panic = 'abort'
 strip = true
+
+# ─── P27 SPEED-DIAMOND ──────────────────────────────────────────────
+# For local dev / benchmarking. Runtime hot paths dominate.
+# Canonical source: https://cochranblock.org/diamond-profile.toml
+[profile.diamond]
+inherits = "release"
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = true
+panic = "abort"
+overflow-checks = false
+debug = false
+incremental = false
+split-debuginfo = "off"
+
+# ─── P27 SIZE-DIAMOND (edge) ────────────────────────────────────────
+# Primary profile for ghost-fabric: LoRa mesh node, 915 MHz constrained.
+# Every byte crosses a bandwidth-constrained link.
+[profile.diamond-edge]
+inherits = "release"
+opt-level = "s"
+lto = "fat"
+codegen-units = 1
+strip = true
+panic = "abort"
+overflow-checks = false
+debug = false
+incremental = false
+split-debuginfo = "off"
