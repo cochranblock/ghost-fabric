@@ -6,7 +6,7 @@ resolver = "3"
 name = "ghost-fabric"
 version = "0.1.0"
 edition = "2024"
-
+license = "Unlicense"
 [lib]
 name = "ghost_fabric_core"
 path = "src/lib.rs"
