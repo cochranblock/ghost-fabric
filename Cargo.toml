@@ -7,6 +7,9 @@ name = "ghost-fabric"
 version = "0.1.0"
 edition = "2024"
 license = "Unlicense"
+description = "RF-isolation air-gap protocol over 915 MHz LoRa. Different axis than IP-network air-gapping."
+repository = "https://github.com/cochranblock/ghost-fabric"
+authors = ["Cochran Block"]
 [lib]
 name = "ghost_fabric_core"
 path = "src/lib.rs"
