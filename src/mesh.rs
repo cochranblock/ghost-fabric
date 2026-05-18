@@ -3,8 +3,16 @@
 //! T2=MeshNetwork trait, T3=Peer struct, T9=PeerTable in-memory store.
 //! Route scoring: RSSI + battery + last_seen recency.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::time::{SystemTime, UNIX_EPOCH};
+
+/// Max peers held in T9. New peers past the cap evict the LRU entry by `last_seen`.
+/// Bounds memory under flood; 64 is plenty for a sub-GHz LoRa neighborhood.
+pub const PEER_CAP: usize = 64;
+
+/// Max remembered (src, seq) pairs for duplicate suppression.
+/// FIFO eviction once full.
+pub const SEEN_CAP: usize = 256;
 
 /// T3=Peer — a known neighbor node
 #[derive(Debug, Clone)]
@@ -52,6 +60,8 @@ pub trait T2 {
 /// T9=PeerTable — in-memory peer table
 pub struct T9 {
     peers: HashMap<String, T3>,
+    seen: HashSet<(String, u16)>,
+    seen_order: VecDeque<(String, u16)>,
 }
 
 impl Default for T9 {
@@ -64,6 +74,8 @@ impl T9 {
     pub fn new() -> Self {
         Self {
             peers: HashMap::new(),
+            seen: HashSet::new(),
+            seen_order: VecDeque::new(),
         }
     }
 
@@ -74,10 +86,46 @@ impl T9 {
         self.peers.retain(|_, p| p.last_seen >= cutoff);
         before - self.peers.len()
     }
+
+    /// f27=mark_seen — record (src, seq). Returns `true` if this pair was already
+    /// present (caller should drop the frame), `false` if newly recorded.
+    /// Bounded by `SEEN_CAP` with FIFO eviction.
+    pub fn f27(&mut self, src: &str, seq: u16) -> bool {
+        let key = (src.to_string(), seq);
+        if !self.seen.insert(key.clone()) {
+            return true;
+        }
+        self.seen_order.push_back(key);
+        if self.seen_order.len() > SEEN_CAP
+            && let Some(oldest) = self.seen_order.pop_front()
+        {
+            self.seen.remove(&oldest);
+        }
+        false
+    }
+
+    /// Evict the peer with the oldest `last_seen` if the table is at `PEER_CAP`.
+    /// No-op if under cap. Used before inserting a *new* peer.
+    fn evict_lru(&mut self) {
+        if self.peers.len() < PEER_CAP {
+            return;
+        }
+        if let Some(victim) = self
+            .peers
+            .values()
+            .min_by_key(|p| p.last_seen)
+            .map(|p| p.node_id.clone())
+        {
+            self.peers.remove(&victim);
+        }
+    }
 }
 
 impl T2 for T9 {
     fn add_peer(&mut self, peer: T3) {
+        if !self.peers.contains_key(&peer.node_id) {
+            self.evict_lru();
+        }
         self.peers.insert(peer.node_id.clone(), peer);
     }
 
@@ -140,6 +188,7 @@ impl T9 {
             }
             let mut peer = T3::new(&entry.id, entry.rssi, entry.battery);
             peer.hop_count = entry.hops.saturating_add(1);
+            self.evict_lru();
             self.peers.insert(entry.id.clone(), peer);
             added += 1;
         }
@@ -328,5 +377,114 @@ mod tests {
         table.f25(&entries, "gf-relay");
         let peer = table.get_peer("gf-far").unwrap();
         assert_eq!(peer.hop_count, 255); // saturating_add(1) on 255 stays 255
+    }
+
+    // --- duplicate suppression (f27) ---
+
+    #[test]
+    fn f27_first_time_returns_false() {
+        let mut table = T9::new();
+        assert!(!table.f27("gf-a", 1));
+    }
+
+    #[test]
+    fn f27_duplicate_returns_true() {
+        let mut table = T9::new();
+        assert!(!table.f27("gf-a", 1));
+        assert!(table.f27("gf-a", 1));
+    }
+
+    #[test]
+    fn f27_different_seq_not_duplicate() {
+        let mut table = T9::new();
+        assert!(!table.f27("gf-a", 1));
+        assert!(!table.f27("gf-a", 2));
+    }
+
+    #[test]
+    fn f27_different_src_not_duplicate() {
+        let mut table = T9::new();
+        assert!(!table.f27("gf-a", 1));
+        assert!(!table.f27("gf-b", 1));
+    }
+
+    #[test]
+    fn f27_fifo_evicts_oldest_after_cap() {
+        let mut table = T9::new();
+        // Fill exactly to cap with unique (src, seq)
+        for i in 0..(SEEN_CAP as u16) {
+            assert!(!table.f27("gf-x", i));
+        }
+        // One more — pushes (gf-x, 0) out
+        assert!(!table.f27("gf-x", SEEN_CAP as u16));
+        // Oldest is now forgotten, so re-inserting it returns false (treated as new)
+        assert!(!table.f27("gf-x", 0));
+        // But the most-recent ones are still remembered
+        assert!(table.f27("gf-x", SEEN_CAP as u16));
+    }
+
+    // --- peer table cap (PEER_CAP) ---
+
+    #[test]
+    fn peer_cap_evicts_oldest_on_overflow() {
+        let mut table = T9::new();
+        // Fill table to capacity with ascending last_seen so the first peer is the LRU.
+        for i in 0..PEER_CAP {
+            let mut p = T3::new(&format!("gf-{:03}", i), -70, 80);
+            p.last_seen = 1000 + i as u64;
+            table.add_peer(p);
+        }
+        assert_eq!(table.peer_count(), PEER_CAP);
+        assert!(table.get_peer("gf-000").is_some());
+
+        // One more new peer — evicts the LRU (gf-000)
+        let mut newcomer = T3::new("gf-new", -70, 80);
+        newcomer.last_seen = 1000 + PEER_CAP as u64;
+        table.add_peer(newcomer);
+
+        assert_eq!(table.peer_count(), PEER_CAP);
+        assert!(table.get_peer("gf-000").is_none());
+        assert!(table.get_peer("gf-new").is_some());
+    }
+
+    #[test]
+    fn peer_cap_update_existing_does_not_evict() {
+        let mut table = T9::new();
+        for i in 0..PEER_CAP {
+            let mut p = T3::new(&format!("gf-{:03}", i), -70, 80);
+            p.last_seen = 1000 + i as u64;
+            table.add_peer(p);
+        }
+        assert_eq!(table.peer_count(), PEER_CAP);
+
+        // Re-insert an existing peer with updated values — count stays, no eviction.
+        table.add_peer(T3::new("gf-000", -50, 95));
+        assert_eq!(table.peer_count(), PEER_CAP);
+        let p = table.get_peer("gf-000").unwrap();
+        assert_eq!(p.rssi, -50);
+        assert_eq!(p.battery_pct, 95);
+    }
+
+    #[test]
+    fn f25_respects_peer_cap() {
+        let mut table = T9::new();
+        for i in 0..PEER_CAP {
+            let mut p = T3::new(&format!("gf-{:03}", i), -70, 80);
+            p.last_seen = 1000 + i as u64;
+            table.add_peer(p);
+        }
+        // Sync entries that would push us over cap
+        let entries: Vec<crate::packet::T16> = (0..10)
+            .map(|i| crate::packet::T16 {
+                id: format!("gf-sync-{}", i),
+                rssi: -75,
+                battery: 70,
+                hops: 1,
+            })
+            .collect();
+        let added = table.f25(&entries, "gf-sender");
+        assert_eq!(added, 10);
+        // Cap holds — older peers were evicted
+        assert_eq!(table.peer_count(), PEER_CAP);
     }
 }

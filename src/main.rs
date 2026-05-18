@@ -177,6 +177,12 @@ fn f22(
         return;
     }
 
+    // Duplicate suppression: drop replays / relayed echoes by (src, seq).
+    // Without this, a single beacon cascades through a 4-node mesh as 4×3×2 copies.
+    if peers.f27(&frame.src, frame.seq) {
+        return;
+    }
+
     match frame.kind {
         packet::T13::Beacon => {
             if let packet::T14::Beacon {
